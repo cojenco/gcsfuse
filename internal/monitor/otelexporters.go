@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	otelgcp"github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp"
 	cloudmetric "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric"
 	"github.com/googlecloudplatform/gcsfuse/v3/cfg"
 	"github.com/googlecloudplatform/gcsfuse/v3/common"
@@ -39,7 +40,7 @@ import (
 const serviceName = "gcsfuse"
 const cloudMonitoringMetricPrefix = "custom.googleapis.com/gcsfuse/"
 
-var allowedMetricPrefixes = []string{"fs/", "gcs/", "file_cache/"}
+var allowedMetricPrefixes = []string{"fs/", "gcs/", "file_cache/", "grpc."}
 
 // SetupOTelMetricExporters sets up the metrics exporters
 func SetupOTelMetricExporters(ctx context.Context, c *cfg.Config) (shutdownFn common.ShutdownFn) {
@@ -168,4 +169,9 @@ func getResource(ctx context.Context) (*resource.Resource, error) {
 			semconv.ServiceVersion(common.GetVersion()),
 		),
 	)
+}
+
+func DetectOnGKE() bool {
+	detector := otelgcp.NewDetector()
+	return detector.CloudPlatform() == otelgcp.GKE
 }
