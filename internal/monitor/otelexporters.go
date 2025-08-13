@@ -21,8 +21,6 @@ import (
 	"strings"
 	"time"
 
-	"cloud.google.com/go/storage"
-	"cloud.google.com/go/storage/experimental"
 
 	otelgcp"github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp"
 	cloudmetric "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric"
@@ -71,70 +69,6 @@ func SetupOTelMetricExporters(ctx context.Context, c *cfg.Config) (shutdownFn co
 	shutdownFns = append(shutdownFns, meterProvider.Shutdown)
 
 	otel.SetMeterProvider(meterProvider)
-	fmt.Println("########## set meter provider !!!!!!!!!!!!!!!!!!!")
-		/////////
-	// Pass the GCSFuse OpenTelemetry MeterProvider to the storage client,
-	// only if it's the configured SDK provider, not a No-op.
-	fmt.Println("hello from gRPCClient test")
-	mp := otel.GetMeterProvider()
-	fmt.Println("!! meterProvider")
-	fmt.Println(meterProvider)
-	fmt.Println("!! mp")
-	fmt.Println(mp)
-
-	detector := otelgcp.NewDetector()
-	// TO DELETE //
-	fmt.Println("!! detector")
-	fmt.Println(detector)
-	fmt.Println("!! DetectOnGKE()")
-	fmt.Println(DetectOnGKE())
-	fmt.Println("!! detector.CloudPlatform()")
-	fmt.Println(detector.CloudPlatform())
-	fmt.Println("!! detector.CloudPlatform() == otelgcp.GKE")
-	fmt.Println(detector.CloudPlatform() == otelgcp.GKE)
-	fmt.Println("c.Metrics.PrometheusPort > 0")
-	fmt.Println(c.Metrics.PrometheusPort > 0)
-	// TO DELETE //
-	if sdkmp, ok := mp.(*metric.MeterProvider); ok {
-		// ok is true, so sdkmp is of type *sdkmetric.MeterProvider
-		fmt.Printf("Got meterprovider %s", sdkmp)
-		// clientOpts = append(clientOpts, experimental.WithMeterProvider(sdkmp))
-		// Creates a gRPC enabled client.
-		// client, err := storage.NewGRPCClient(ctx)
-		client, err := storage.NewGRPCClient(ctx, experimental.WithMeterProvider(sdkmp))
-		if err != nil {
-			fmt.Println("Failed to create GRPC Client")
-		}
-		bucketName := "test-fuse-metrics66"
-		attrs, err := client.Bucket(bucketName).Attrs(ctx)
-		if err != nil {
-			fmt.Println("Failed to get bucket")
-		}
-		fmt.Println("Got bucket")
-		fmt.Println(attrs.Name)
-	}
-
-	// // Detect if the program is running on GKE and if a prometheus exporter is configured
-	// if detector.CloudPlatform() == otelgcp.GCE && c.Metrics.PrometheusPort > 0 {
-	// 	if sdkmp, ok := mp.(*metric.MeterProvider); ok {
-	// 		// ok is true, so sdkmp is of type *sdkmetric.MeterProvider
-	// 		fmt.Printf("Got meterprovider %s", sdkmp)
-	// 		// clientOpts = append(clientOpts, experimental.WithMeterProvider(sdkmp))
-	// 		// Creates a gRPC enabled client.
-	// 		// client, err := storage.NewGRPCClient(ctx)
-	// 		client, err := storage.NewGRPCClient(ctx, experimental.WithMeterProvider(sdkmp))
-	// 		if err != nil {
-	// 			fmt.Println("Failed to create GRPC Client")
-	// 		}
-	// 		bucketName := "test-fuse-metrics66"
-	// 		attrs, err := client.Bucket(bucketName).Attrs(ctx)
-	// 		if err != nil {
-	// 			fmt.Println("Failed to get bucket")
-	// 		}
-	// 		fmt.Println("Got bucket")
-	// 		fmt.Println(attrs.Name)
-	// 	}
-	// }
 
 	return common.JoinShutdownFunc(shutdownFns...)
 }

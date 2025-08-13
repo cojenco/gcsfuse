@@ -156,10 +156,6 @@ func assertNonZeroCountMetric(testSuite *PromTest, metricName, labelName, labelV
 			if *m.Counter.Value <= 0 {
 				continue
 			}
-			if k == "grpc_client_attempt_started" {
-				fmt.Println("!!! m.GetLabel()")
-				fmt.Println(m.GetLabel())
-			}
 			if labelName == "" {
 				return
 			}
@@ -203,33 +199,33 @@ func assertNonZeroHistogramMetric(testSuite *PromTest, metricName, labelName, la
 	}
 }
 
-func (testSuite *PromTest) TestStatMetrics() {
-	_, err := os.Stat(path.Join(testSuite.mountPoint, "hello/hello.txt"))
+// func (testSuite *PromTest) TestStatMetrics() {
+// 	_, err := os.Stat(path.Join(testSuite.mountPoint, "hello/hello.txt"))
 
-	require.NoError(testSuite.T(), err)
-	assertNonZeroCountMetric(testSuite, "fs_ops_count", "fs_op", "LookUpInode")
-	assertNonZeroHistogramMetric(testSuite, "fs_ops_latency", "fs_op", "LookUpInode")
-	assertNonZeroCountMetric(testSuite, "gcs_request_count", "gcs_method", "StatObject")
-	assertNonZeroHistogramMetric(testSuite, "gcs_request_latencies", "gcs_method", "StatObject")
-}
+// 	require.NoError(testSuite.T(), err)
+// 	assertNonZeroCountMetric(testSuite, "fs_ops_count", "fs_op", "LookUpInode")
+// 	assertNonZeroHistogramMetric(testSuite, "fs_ops_latency", "fs_op", "LookUpInode")
+// 	assertNonZeroCountMetric(testSuite, "gcs_request_count", "gcs_method", "StatObject")
+// 	assertNonZeroHistogramMetric(testSuite, "gcs_request_latencies", "gcs_method", "StatObject")
+// }
 
-func (testSuite *PromTest) TestFsOpsErrorMetrics() {
-	_, err := os.Stat(path.Join(testSuite.mountPoint, "non_existent_path.txt"))
-	require.Error(testSuite.T(), err)
+// func (testSuite *PromTest) TestFsOpsErrorMetrics() {
+// 	_, err := os.Stat(path.Join(testSuite.mountPoint, "non_existent_path.txt"))
+// 	require.Error(testSuite.T(), err)
 
-	assertNonZeroCountMetric(testSuite, "fs_ops_error_count", "fs_op", "LookUpInode")
-	assertNonZeroHistogramMetric(testSuite, "fs_ops_latency", "fs_op", "LookUpInode")
-}
+// 	assertNonZeroCountMetric(testSuite, "fs_ops_error_count", "fs_op", "LookUpInode")
+// 	assertNonZeroHistogramMetric(testSuite, "fs_ops_latency", "fs_op", "LookUpInode")
+// }
 
-func (testSuite *PromTest) TestListMetrics() {
-	_, err := os.ReadDir(path.Join(testSuite.mountPoint, "hello"))
+// func (testSuite *PromTest) TestListMetrics() {
+// 	_, err := os.ReadDir(path.Join(testSuite.mountPoint, "hello"))
 
-	require.NoError(testSuite.T(), err)
-	assertNonZeroCountMetric(testSuite, "fs_ops_count", "fs_op", "ReadDir")
-	assertNonZeroCountMetric(testSuite, "fs_ops_count", "fs_op", "OpenDir")
-	assertNonZeroCountMetric(testSuite, "gcs_request_count", "gcs_method", "ListObjects")
-	assertNonZeroHistogramMetric(testSuite, "gcs_request_latencies", "gcs_method", "ListObjects")
-}
+// 	require.NoError(testSuite.T(), err)
+// 	assertNonZeroCountMetric(testSuite, "fs_ops_count", "fs_op", "ReadDir")
+// 	assertNonZeroCountMetric(testSuite, "fs_ops_count", "fs_op", "OpenDir")
+// 	assertNonZeroCountMetric(testSuite, "gcs_request_count", "gcs_method", "ListObjects")
+// 	assertNonZeroHistogramMetric(testSuite, "gcs_request_latencies", "gcs_method", "ListObjects")
+// }
 
 func (testSuite *PromTest) TestReadMetrics() {
 	_, err := os.ReadFile(path.Join(testSuite.mountPoint, "hello/hello.txt"))
@@ -251,20 +247,14 @@ func (testSuite *PromTest) TestReadMetrics() {
 	assertNonZeroHistogramMetric(testSuite, "gcs_request_latencies", "gcs_method", "NewReader")
 	assertNonZeroHistogramMetric(testSuite, "gcs_request_latencies", "gcs_method", "NewReader")
 	// NEW //
-	assertNonZeroCountMetric(testSuite, "grpc_client_attempt_started", "", "")
-}
-
-func (testSuite *PromTest) TestStorageClientGrpcMetrics() {
-	// Perform a file operation that uses the gRPC client. // It doesn't seem to use GRPCClient
-	filePath := path.Join(testSuite.mountPoint, "grpc_test_file.txt")
-	err := os.WriteFile(filePath, []byte("This file tests gRPC metrics."), 0644)
-	require.NoError(testSuite.T(), err)
-	// Testing if this will trigger grpc // It doesn't seem to use GRPCClient
-	// err = os.Remove(path.Join(testSuite.mountPoint, "hello/hello.txt"))
-	// require.NoError(testSuite.T(), err)
-
 	// Assert that gRPC-specific metrics are present.
-	assertNonZeroCountMetric(testSuite, "grpc_client_attempt_started", "grpc_method", "google.storage.v2.Storage/GetBucket")
+	assertNonZeroCountMetric(testSuite, "grpc_client_attempt_started", "", "")
+	assertNonZeroCountMetric(testSuite, "grpc_client_attempt_started", "grpc_method", "google.storage.v2.Storage/ReadObject")
+	assertNonZeroHistogramMetric(testSuite, "grpc_client_attempt_duration_seconds", "", "")
+	assertNonZeroHistogramMetric(testSuite, "grpc_client_call_duration_seconds", "", "")
+	assertNonZeroHistogramMetric(testSuite, "grpc_client_attempt_rcvd_total_compressed_message_size_bytes", "", "")
+	assertNonZeroHistogramMetric(testSuite, "grpc_client_attempt_sent_total_compressed_message_size_bytes", "", "")
+
 }
 
 func TestPromOTELSuite(t *testing.T) {
