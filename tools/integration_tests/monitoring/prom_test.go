@@ -37,7 +37,7 @@ import (
 
 const (
 	testHNSBucket  = "gcsfuse_monitoring_test_bucket"
-	testFlatBucket = "gcsfuse_monitoring_test_bucket_flat"
+	testFlatBucket = "test-fuse-metrics66"
 )
 
 var (
@@ -125,11 +125,10 @@ func (testSuite *PromTest) mount(bucketName string) error {
 	require.NoError(testSuite.T(), err)
 	testSuite.T().Cleanup(func() { _ = os.RemoveAll(cacheDir) })
 
-	flags := []string{fmt.Sprintf("--prometheus-port=%d", prometheusPort), "--cache-dir", cacheDir}
+	flags := []string{"--client-protocol=grpc", fmt.Sprintf("--prometheus-port=%d", prometheusPort), "--cache-dir", cacheDir}
 	args := append(flags, bucketName, testSuite.mountPoint)
 
 	if err := mounting.MountGcsfuse(testSuite.gcsfusePath, args); err != nil {
-		fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 		return err
 	}
 	return nil
@@ -156,6 +155,10 @@ func assertNonZeroCountMetric(testSuite *PromTest, metricName, labelName, labelV
 		for _, m := range v.Metric {
 			if *m.Counter.Value <= 0 {
 				continue
+			}
+			if k == "grpc_client_attempt_started" {
+				fmt.Println("!!! m.GetLabel()")
+				fmt.Println(m.GetLabel())
 			}
 			if labelName == "" {
 				return
@@ -247,6 +250,21 @@ func (testSuite *PromTest) TestReadMetrics() {
 	assertNonZeroCountMetric(testSuite, "gcs_read_bytes_count", "", "")
 	assertNonZeroHistogramMetric(testSuite, "gcs_request_latencies", "gcs_method", "NewReader")
 	assertNonZeroHistogramMetric(testSuite, "gcs_request_latencies", "gcs_method", "NewReader")
+	// NEW //
+	assertNonZeroCountMetric(testSuite, "grpc_client_attempt_started", "", "")
+}
+
+func (testSuite *PromTest) TestStorageClientGrpcMetrics() {
+	// Perform a file operation that uses the gRPC client. // It doesn't seem to use GRPCClient
+	filePath := path.Join(testSuite.mountPoint, "grpc_test_file.txt")
+	err := os.WriteFile(filePath, []byte("This file tests gRPC metrics."), 0644)
+	require.NoError(testSuite.T(), err)
+	// Testing if this will trigger grpc // It doesn't seem to use GRPCClient
+	// err = os.Remove(path.Join(testSuite.mountPoint, "hello/hello.txt"))
+	// require.NoError(testSuite.T(), err)
+
+	// Assert that gRPC-specific metrics are present.
+	assertNonZeroCountMetric(testSuite, "grpc_client_attempt_started", "grpc_method", "google.storage.v2.Storage/GetBucket")
 }
 
 func TestPromOTELSuite(t *testing.T) {
