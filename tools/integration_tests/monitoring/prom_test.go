@@ -37,7 +37,7 @@ import (
 
 const (
 	testHNSBucket  = "gcsfuse_monitoring_test_bucket"
-	testFlatBucket = "test-fuse-metrics66"
+	testFlatBucket = "cloud-samples-data" // public bucket read-only data
 )
 
 var (
@@ -228,7 +228,7 @@ func assertNonZeroHistogramMetric(testSuite *PromTest, metricName, labelName, la
 // }
 
 func (testSuite *PromTest) TestReadMetrics() {
-	_, err := os.ReadFile(path.Join(testSuite.mountPoint, "hello/hello.txt"))
+	_, err := os.ReadFile(path.Join(testSuite.mountPoint, "storage/bucket-lock/dummy_loan"))
 
 	require.NoError(testSuite.T(), err)
 	assertNonZeroCountMetric(testSuite, "file_cache_read_bytes_count", "read_type", "Sequential")
