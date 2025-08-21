@@ -45,7 +45,7 @@ func (testSuite *PromGrpcMetricsTest) TearDownTest() {
 	if err := util.Unmount(testSuite.mountPoint); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: unmount failed: %v\n", err)
 	}
-	os.RemoveAll(testSuite.mountPoint)
+	os.Remove(testSuite.mountPoint)
 }
 
 func (testSuite *PromGrpcMetricsTest) mount(bucketName string) error {
