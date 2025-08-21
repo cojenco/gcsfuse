@@ -15,16 +15,22 @@
 package monitoring
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 	"os"
+	"os/exec"
 	"path"
 	"strings"
 	"testing"
 
+	"github.com/googlecloudplatform/gcsfuse/v3/tools/integration_tests/util/client"
 	"github.com/googlecloudplatform/gcsfuse/v3/tools/integration_tests/util/mounting"
 	"github.com/googlecloudplatform/gcsfuse/v3/tools/integration_tests/util/setup"
 	"github.com/googlecloudplatform/gcsfuse/v3/tools/util"
-	// "github.com/stretchr/testify/assert"
+	promclient "github.com/prometheus/client_model/go"
+	"github.com/prometheus/common/expfmt"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -34,6 +40,36 @@ const (
 	testFlatBucket = "gcsfuse_monitoring_test_bucket_flat"
 )
 
+var (
+	portNonHNSRun = 9190
+	portHNSRun    = 10190
+)
+
+var prometheusPort int
+
+func setPrometheusPort(t *testing.T) {
+	if isHNSTestRun(t) {
+		prometheusPort = portHNSRun
+		portHNSRun++
+		return
+	}
+	prometheusPort = portNonHNSRun
+	portNonHNSRun++
+}
+
+func getBucket(t *testing.T) string {
+	if isHNSTestRun(t) {
+		return testHNSBucket
+	}
+	return testFlatBucket
+}
+
+func isPortOpen(port int) bool {
+	c := exec.Command("lsof", "-t", fmt.Sprintf("-i:%d", port))
+	output, _ := c.CombinedOutput()
+	return len(output) == 0
+}
+
 type PromTest struct {
 	suite.Suite
 	// Path to the gcsfuse binary.
@@ -42,6 +78,14 @@ type PromTest struct {
 	// A temporary directory into which a file system may be mounted. Removed in
 	// TearDown.
 	mountPoint string
+}
+
+// isHNSTestRun returns true if the bucket is an HNS bucket.
+func isHNSTestRun(t *testing.T) bool {
+	storageClient, err := client.CreateStorageClient(context.Background())
+	require.NoError(t, err, "error while creating storage client")
+	defer storageClient.Close()
+	return setup.IsHierarchicalBucket(context.Background(), storageClient)
 }
 
 func (testSuite *PromTest) SetupSuite() {
@@ -66,11 +110,10 @@ func (testSuite *PromTest) TearDownTest() {
 	if err := util.Unmount(testSuite.mountPoint); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: unmount failed: %v\n", err)
 	}
-	// require.True(testSuite.T(), isPortOpen(prometheusPort))
+	require.True(testSuite.T(), isPortOpen(prometheusPort))
 
-	// err := os.Remove(testSuite.mountPoint)
-	// assert.NoError(testSuite.T(), err)
-	os.Remove(testSuite.mountPoint)
+	err := os.Remove(testSuite.mountPoint)
+	assert.NoError(testSuite.T(), err)
 }
 
 func (testSuite *PromTest) mount(bucketName string) error {
@@ -89,6 +132,71 @@ func (testSuite *PromTest) mount(bucketName string) error {
 		return err
 	}
 	return nil
+}
+
+// parsePromFormat fetches and parses the Prometheus metrics.
+func parsePromFormat(t *testing.T) (map[string]*promclient.MetricFamily, error) {
+	t.Helper()
+	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/metrics", prometheusPort))
+	require.NoError(t, err) // Use t for require.NoError
+	defer resp.Body.Close()
+	var parser expfmt.TextParser
+	return parser.TextToMetricFamilies(resp.Body)
+}
+
+// assertNonZeroCountMetric asserts that the specified count metric is present and is positive in the Prometheus export
+func assertNonZeroCountMetric(t *testing.T, metricName, labelName, labelValue string) {
+	t.Helper()
+	mf, err := parsePromFormat(t) // Pass t to parsePromFormat
+	require.NoError(t, err)      // Use t for require.NoError
+	for k, v := range mf {
+		if k != metricName || *v.Type != promclient.MetricType_COUNTER {
+			continue
+		}
+		for _, m := range v.Metric {
+			if *m.Counter.Value <= 0 {
+				continue
+			}
+			if labelName == "" {
+				return
+			}
+			for _, l := range m.GetLabel() {
+				if *l.Name == labelName && *l.Value == labelValue {
+					return
+				}
+			}
+		}
+	}
+	assert.Fail(t, fmt.Sprintf("Didn't find the metric with name: %s, labelName: %s and labelValue: %s",
+		metricName, labelName, labelValue))
+}
+
+// assertNonZeroHistogramMetric asserts that the specified histogram metric is present and is positive for at least one of the buckets in the Prometheus export.
+func assertNonZeroHistogramMetric(t *testing.T, metricName, labelName, labelValue string) {
+	t.Helper()
+	mf, err := parsePromFormat(t) // Pass t to parsePromFormat
+	require.NoError(t, err)      // Use t for require.NoError
+
+	for k, v := range mf {
+		if k != metricName || *v.Type != promclient.MetricType_HISTOGRAM {
+			continue
+		}
+		for _, m := range v.Metric {
+			for _, bkt := range m.GetHistogram().Bucket {
+				if bkt.CumulativeCount == nil || *bkt.CumulativeCount == 0 {
+					continue
+				}
+				if labelName == "" {
+					return
+				}
+				for _, l := range m.GetLabel() {
+					if *l.Name == labelName && *l.Value == labelValue {
+						return
+					}
+				}
+			}
+		}
+	}
 }
 
 func (testSuite *PromTest) TestStatMetrics() {
