@@ -28,7 +28,7 @@ import (
 	"github.com/googleapis/gax-go/v2"
 	"github.com/googlecloudplatform/gcsfuse/v3/cfg"
 	"github.com/googlecloudplatform/gcsfuse/v3/internal/logger"
-	"github.com/googlecloudplatform/gcsfuse/v3/internal/monitor"
+	// "github.com/googlecloudplatform/gcsfuse/v3/internal/monitor"
 	"github.com/googlecloudplatform/gcsfuse/v3/internal/storage/gcs"
 	"github.com/googlecloudplatform/gcsfuse/v3/internal/storage/storageutil"
 	"go.opentelemetry.io/otel"
@@ -126,12 +126,17 @@ func createClientOptionForGRPCClient(ctx context.Context, clientConfig *storageu
 
 	// Pass the GCSFuse OpenTelemetry MeterProvider to the storage client,
 	// only when a configured exporter (not a No-op) is set on GKE.
-	if monitor.DetectOnGKE() {
-		mp := otel.GetMeterProvider()
-		if sdkmp, ok := mp.(*sdkmetric.MeterProvider); ok {
-			// ok is true, so sdkmp is of type *sdkmetric.MeterProvider
-			clientOpts = append(clientOpts, experimental.WithMeterProvider(sdkmp))
-		}
+	// if monitor.DetectOnGKE() {
+	// 	mp := otel.GetMeterProvider()
+	// 	if sdkmp, ok := mp.(*sdkmetric.MeterProvider); ok {
+	// 		// ok is true, so sdkmp is of type *sdkmetric.MeterProvider
+	// 		clientOpts = append(clientOpts, experimental.WithMeterProvider(sdkmp))
+	// 	}
+	// }
+	mp := otel.GetMeterProvider()
+	if sdkmp, ok := mp.(*sdkmetric.MeterProvider); ok {
+		// ok is true, so sdkmp is of type *sdkmetric.MeterProvider
+		clientOpts = append(clientOpts, experimental.WithMeterProvider(sdkmp))
 	}
 
 	return clientOpts, nil
