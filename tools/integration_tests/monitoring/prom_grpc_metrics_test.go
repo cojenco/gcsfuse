@@ -78,7 +78,8 @@ func (testSuite *PromGrpcMetricsTest) mount(bucketName string) error {
 }
 
 func (testSuite *PromGrpcMetricsTest) TestStorageClientGrpcMetrics() {
-	_, err := os.ReadFile(path.Join(testSuite.mountPoint, "hello/hello.txt"))
+	// _, err := os.ReadFile(path.Join(testSuite.mountPoint, "hello/hello.txt"))
+	_, err := os.ReadFile(path.Join(testSuite.mountPoint, "storage/bucket-lock/dummy_loan"))
 	require.NoError(testSuite.T(), err)
 
 	// Assert that gRPC metrics are present.

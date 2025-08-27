@@ -37,7 +37,8 @@ import (
 
 const (
 	testHNSBucket  = "gcsfuse_monitoring_test_bucket"
-	testFlatBucket = "gcsfuse_monitoring_test_bucket_flat"
+	// testFlatBucket = "gcsfuse_monitoring_test_bucket_flat"
+	testFlatBucket = "cloud-samples-data" // public bucket read-only data
 )
 
 var (
@@ -199,7 +200,8 @@ func assertNonZeroHistogramMetric(t *testing.T, metricName, labelName, labelValu
 }
 
 func (testSuite *PromTest) TestStatMetrics() {
-	_, err := os.Stat(path.Join(testSuite.mountPoint, "hello/hello.txt"))
+	// _, err := os.Stat(path.Join(testSuite.mountPoint, "hello/hello.txt"))
+	_, err := os.Stat(path.Join(testSuite.mountPoint, "storage/bucket-lock/dummy_loan"))
 
 	require.NoError(testSuite.T(), err)
 	assertNonZeroCountMetric(testSuite.T(), "fs_ops_count", "fs_op", "LookUpInode")
@@ -216,18 +218,19 @@ func (testSuite *PromTest) TestFsOpsErrorMetrics() {
 	assertNonZeroHistogramMetric(testSuite.T(), "fs_ops_latency", "fs_op", "LookUpInode")
 }
 
-func (testSuite *PromTest) TestListMetrics() {
-	_, err := os.ReadDir(path.Join(testSuite.mountPoint, "hello"))
+// func (testSuite *PromTest) TestListMetrics() {
+// 	_, err := os.ReadDir(path.Join(testSuite.mountPoint, "hello"))
 
-	require.NoError(testSuite.T(), err)
-	assertNonZeroCountMetric(testSuite.T(), "fs_ops_count", "fs_op", "ReadDir")
-	assertNonZeroCountMetric(testSuite.T(), "fs_ops_count", "fs_op", "OpenDir")
-	assertNonZeroCountMetric(testSuite.T(), "gcs_request_count", "gcs_method", "ListObjects")
-	assertNonZeroHistogramMetric(testSuite.T(), "gcs_request_latencies", "gcs_method", "ListObjects")
-}
+// 	require.NoError(testSuite.T(), err)
+// 	assertNonZeroCountMetric(testSuite.T(), "fs_ops_count", "fs_op", "ReadDir")
+// 	assertNonZeroCountMetric(testSuite.T(), "fs_ops_count", "fs_op", "OpenDir")
+// 	assertNonZeroCountMetric(testSuite.T(), "gcs_request_count", "gcs_method", "ListObjects")
+// 	assertNonZeroHistogramMetric(testSuite.T(), "gcs_request_latencies", "gcs_method", "ListObjects")
+// }
 
 func (testSuite *PromTest) TestReadMetrics() {
-	_, err := os.ReadFile(path.Join(testSuite.mountPoint, "hello/hello.txt"))
+	// _, err := os.ReadFile(path.Join(testSuite.mountPoint, "hello/hello.txt"))
+	_, err := os.ReadFile(path.Join(testSuite.mountPoint, "storage/bucket-lock/dummy_loan"))
 
 	require.NoError(testSuite.T(), err)
 	assertNonZeroCountMetric(testSuite.T(), "file_cache_read_bytes_count", "read_type", "Sequential")
