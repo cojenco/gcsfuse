@@ -149,7 +149,9 @@ func assertNonZeroCountMetric(t *testing.T, metricName, labelName, labelValue st
 	t.Helper()
 	mf, err := parsePromFormat(t) // Pass t to parsePromFormat
 	require.NoError(t, err)       // Use t for require.NoError
+	fmt.Println("### kkk metricName  k")
 	for k, v := range mf {
+		fmt.Println(k)
 		if k != metricName || *v.Type != promclient.MetricType_COUNTER {
 			continue
 		}
